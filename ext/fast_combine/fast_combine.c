@@ -4,9 +4,10 @@ VALUE rb_mFastCombine;
 
 static VALUE method_combine(VALUE self, VALUE array, VALUE mappings);
 static VALUE combine_element(VALUE element, VALUE groups, VALUE mappings);
+static VALUE find_group_for_element(VALUE element, VALUE candidates, VALUE mapping);
+static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv);
 
-void
-Init_fast_combine(void)
+void Init_fast_combine(void)
 {
   rb_mFastCombine = rb_define_module("FastCombine");
   rb_define_singleton_method(rb_mFastCombine, "combine", method_combine, 2);
@@ -26,8 +27,30 @@ static VALUE method_combine(VALUE self, VALUE array, VALUE mappings)
   return final_root;
 }
 
-static VALUE combine_element(VALUE element, VALUE groups, VALUE mappings) {
-  VALUE copy = rb_hash_dup(element);
-  rb_hash_aset(copy, rb_str_new2("tasks"), rb_ary_new());
-  return copy;
+static VALUE combine_element(VALUE src, VALUE groups, VALUE mappings) {
+  VALUE element = rb_hash_dup(src);
+
+  for (long i = 0; i < RARRAY_LEN(groups); i++) {
+    VALUE candidates = rb_ary_entry(groups, i),
+      mapping = rb_ary_entry(mappings, i),
+      key = rb_ary_entry(mapping, 0);
+
+    rb_hash_aset(element, key, find_group_for_element(element, candidates, mapping));
+  }
+
+  return element;
+}
+
+static VALUE find_group_for_element(VALUE element, VALUE candidates, VALUE mapping) {
+  VALUE key = rb_ary_entry(mapping, 0),
+    keys = rb_ary_entry(mapping, 1),
+    child_key = rb_ary_shift(rb_funcall(keys, rb_intern("values"), 0)),
+    pk_name = rb_ary_shift(rb_funcall(keys, rb_intern("keys"), 0)),
+    pkey_value = rb_hash_aref(element, pk_name),
+    grouped = rb_block_call(candidates, rb_intern("group_by"), 0, NULL, group_by_value, child_key);
+  return rb_hash_aref(grouped, pkey_value);
+}
+
+static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv) {
+  return rb_hash_aref(element, key);
 }

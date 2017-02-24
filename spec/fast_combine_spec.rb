@@ -42,7 +42,7 @@ RSpec.describe FastCombine do
           ]
         ].freeze
       end
-      let(:mappings) { [:tasks, {name: :user}] }
+      let(:mappings) { [[:tasks, {name: :user}]] }
 
       it 'merges hashes from arrays using provided join keys' do
         output = [
