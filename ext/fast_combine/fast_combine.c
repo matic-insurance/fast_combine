@@ -16,6 +16,8 @@ static VALUE combine_element(VALUE element, VALUE candidates, VALUE mappings);
 static VALUE find_candidates_for_element(VALUE element, VALUE candidates, VALUE keys);
 static VALUE compose_candidates_key(VALUE element, VALUE keys);
 
+static void assert_value(char);
+
 void Init_fast_combine(void)
 {
   rb_mFastCombine = rb_define_module("FastCombine");
@@ -100,7 +102,7 @@ static VALUE combine_element(VALUE src, VALUE nodes, VALUE mappings) {
       key = rb_ary_entry(mapping, 0),
       keys = rb_ary_entry(mapping, 1);
 
-    if(TYPE(candidates) != T_HASH) rb_raise(rb_eRuntimeError, "Illegal state");;
+    assert_value(TYPE(candidates) != T_HASH);
 
     rb_hash_aset(element, key, find_candidates_for_element(element, candidates, keys));
   }
@@ -124,4 +126,8 @@ static VALUE compose_candidates_key(VALUE element, VALUE keys) {
   } else {
     return hash_values_at(element, pk_name);
   }
+}
+
+static void assert_value(char assertion) {
+  if(assertion) rb_raise(rb_eArgError, "Unexpected value");
 }
