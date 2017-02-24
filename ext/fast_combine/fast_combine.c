@@ -6,6 +6,7 @@ static VALUE method_combine(VALUE self, VALUE array, VALUE mappings);
 
 static VALUE group_nodes(VALUE nodes, VALUE mappings);
 static VALUE group_candidates(VALUE candidates, VALUE mapping);
+static char is_array_of_hashes(VALUE array);
 static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv);
 static VALUE group_by_values(VALUE element, VALUE keys, int argc, VALUE* argv);
 static VALUE hash_values_at(VALUE element, VALUE keys);
@@ -23,7 +24,9 @@ void Init_fast_combine(void)
 static VALUE method_combine(VALUE self, VALUE array, VALUE mappings)
 {
   VALUE root = rb_ary_entry(array, 0),
-    nodes = rb_ary_subseq(array, 1, RARRAY_LEN(array));
+    nodes = rb_ary_entry(array, 1);
+
+  if(NIL_P(nodes) || RARRAY_LEN(nodes) == 0) return root;
 
   VALUE final_root = rb_ary_new2(RARRAY_LEN(root));
   VALUE grouped_nodes = group_nodes(nodes, mappings);
@@ -47,6 +50,8 @@ static VALUE group_nodes(VALUE nodes, VALUE mappings) {
 }
 
 static VALUE group_candidates(VALUE candidates, VALUE mapping) {
+  if(!is_array_of_hashes(candidates)) return candidates;
+
   VALUE keys = rb_ary_entry(mapping, 1),
     child_key = rb_funcall(keys, rb_intern("values"), 0);
 
@@ -56,6 +61,10 @@ static VALUE group_candidates(VALUE candidates, VALUE mapping) {
   } else {
     return rb_block_call(candidates, rb_intern("group_by"), 0, NULL, group_by_values, child_key);
   }
+}
+
+static char is_array_of_hashes(VALUE array) {
+  return RARRAY_LEN(array) == 0 || TYPE(rb_ary_entry(array, 0)) == T_HASH;
 }
 
 static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv) {
@@ -82,6 +91,12 @@ static VALUE combine_element(VALUE src, VALUE nodes, VALUE mappings) {
       mapping = rb_ary_entry(mappings, i),
       key = rb_ary_entry(mapping, 0),
       keys = rb_ary_entry(mapping, 1);
+
+    if(RARRAY_LEN(mapping) > 2) {
+      VALUE merged_candidates = method_combine(Qnil, candidates, rb_ary_entry(mapping, 2));
+      candidates = group_candidates(merged_candidates, mapping);
+    }
+    if(TYPE(candidates) != T_HASH) rb_raise(rb_eRuntimeError, "Illegal state");;
 
     rb_hash_aset(element, key, find_candidates_for_element(element, candidates, keys));
   }

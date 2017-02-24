@@ -36,9 +36,11 @@ RSpec.describe FastCombine do
             {name: 'Joe', email: 'joe@doe.org'}.freeze
           ].freeze,
           [
-            {user: 'Jane', title: 'One'}.freeze,
-            {user: 'Jane', title: 'Two'}.freeze,
-            {user: 'Joe', title: 'Three'}.freeze
+            [
+              {user: 'Jane', title: 'One'}.freeze,
+              {user: 'Jane', title: 'Two'}.freeze,
+              {user: 'Joe', title: 'Three'}.freeze
+            ]
           ]
         ].freeze
       end
@@ -62,7 +64,9 @@ RSpec.describe FastCombine do
       let(:input) do
         [
           [{name: 'Jane', email: 'jane@doe.org'}.freeze].freeze,
-          []
+          [
+            []
+          ]
         ].freeze
       end
 
@@ -78,8 +82,10 @@ RSpec.describe FastCombine do
             {name: 'Jane', email: 'jane@doe.org'}.freeze
           ].freeze,
           [
-            {user: 'Jane', user_email: 'jane@doe.org', title: 'One'}.freeze,
-            {user: 'Jane', user_email: '', title: 'Two'}.freeze
+            [
+              {user: 'Jane', user_email: 'jane@doe.org', title: 'One'}.freeze,
+              {user: 'Jane', user_email: '', title: 'Two'}.freeze
+            ].freeze
           ].freeze
         ].freeze
       end
@@ -96,7 +102,7 @@ RSpec.describe FastCombine do
       end
     end
 
-    xdescribe 'integration test' do
+    describe 'integration test' do
       let(:input) do
         [
           [
