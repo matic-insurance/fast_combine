@@ -3,6 +3,8 @@
 VALUE rb_mFastCombine;
 
 static VALUE method_combine(VALUE self, VALUE array, VALUE mappings);
+static VALUE prepare_groups(VALUE groups, VALUE mappings);
+static VALUE prepare_group(VALUE group, VALUE mapping);
 static VALUE combine_element(VALUE element, VALUE groups, VALUE mappings);
 static VALUE find_group_for_element(VALUE element, VALUE candidates, VALUE mapping);
 static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv);
@@ -21,10 +23,29 @@ static VALUE method_combine(VALUE self, VALUE array, VALUE mappings)
   VALUE final_root = rb_ary_new2(RARRAY_LEN(root));
   for (long i = 0; i < RARRAY_LEN(root); i++) {
     VALUE element = RARRAY_AREF(root, i);
-    VALUE new_element = combine_element(element, groups, mappings);
+    VALUE prepared_groups = prepare_groups(groups, mappings);
+    VALUE new_element = combine_element(element, prepared_groups, mappings);
     rb_ary_push(final_root, new_element);
   }
   return final_root;
+}
+
+static VALUE prepare_groups(VALUE groups, VALUE mappings) {
+  VALUE prepared = rb_ary_new2(RARRAY_LEN(groups));
+  for (long i = 0; i < RARRAY_LEN(groups); i++) {
+    VALUE group = RARRAY_AREF(groups, i),
+      mapping = RARRAY_AREF(mappings, i);
+
+    rb_ary_push(prepared, prepare_group(group, mapping));
+  }
+  return prepared;
+}
+
+static VALUE prepare_group(VALUE group, VALUE mapping) {
+  VALUE keys = rb_ary_entry(mapping, 1),
+    child_key = rb_ary_shift(rb_funcall(keys, rb_intern("values"), 0));
+
+  return rb_block_call(group, rb_intern("group_by"), 0, NULL, group_by_value, child_key);
 }
 
 static VALUE combine_element(VALUE src, VALUE groups, VALUE mappings) {
@@ -42,13 +63,10 @@ static VALUE combine_element(VALUE src, VALUE groups, VALUE mappings) {
 }
 
 static VALUE find_group_for_element(VALUE element, VALUE candidates, VALUE mapping) {
-  VALUE key = rb_ary_entry(mapping, 0),
-    keys = rb_ary_entry(mapping, 1),
-    child_key = rb_ary_shift(rb_funcall(keys, rb_intern("values"), 0)),
+  VALUE keys = rb_ary_entry(mapping, 1),
     pk_name = rb_ary_shift(rb_funcall(keys, rb_intern("keys"), 0)),
-    pkey_value = rb_hash_aref(element, pk_name),
-    grouped = rb_block_call(candidates, rb_intern("group_by"), 0, NULL, group_by_value, child_key);
-  return rb_hash_aref(grouped, pkey_value);
+    pkey_value = rb_hash_aref(element, pk_name);
+  return rb_hash_aref(candidates, pkey_value);
 }
 
 static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv) {
