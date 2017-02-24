@@ -3,11 +3,16 @@
 VALUE rb_mFastCombine;
 
 static VALUE method_combine(VALUE self, VALUE array, VALUE mappings);
+
 static VALUE group_nodes(VALUE nodes, VALUE mappings);
 static VALUE group_candidates(VALUE candidates, VALUE mapping);
+static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv);
+static VALUE group_by_values(VALUE element, VALUE keys, int argc, VALUE* argv);
+static VALUE hash_values_at(VALUE element, VALUE keys);
+
 static VALUE combine_element(VALUE element, VALUE candidates, VALUE mappings);
 static VALUE find_candidates_for_element(VALUE element, VALUE candidates, VALUE keys);
-static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv);
+static VALUE compose_candidates_key(VALUE element, VALUE keys);
 
 void Init_fast_combine(void)
 {
@@ -43,13 +48,30 @@ static VALUE group_nodes(VALUE nodes, VALUE mappings) {
 
 static VALUE group_candidates(VALUE candidates, VALUE mapping) {
   VALUE keys = rb_ary_entry(mapping, 1),
-    child_key = rb_ary_shift(rb_funcall(keys, rb_intern("values"), 0));
+    child_key = rb_funcall(keys, rb_intern("values"), 0);
 
-  return rb_block_call(candidates, rb_intern("group_by"), 0, NULL, group_by_value, child_key);
+  if(RARRAY_LEN(child_key) == 1) {
+    child_key = rb_ary_shift(child_key);
+    return rb_block_call(candidates, rb_intern("group_by"), 0, NULL, group_by_value, child_key);
+  } else {
+    return rb_block_call(candidates, rb_intern("group_by"), 0, NULL, group_by_values, child_key);
+  }
 }
 
 static VALUE group_by_value(VALUE element, VALUE key, int argc, VALUE* argv) {
   return rb_hash_aref(element, key);
+}
+
+static VALUE group_by_values(VALUE element, VALUE keys, int argc, VALUE* argv) {
+  return hash_values_at(element, keys);
+}
+
+static VALUE hash_values_at(VALUE element, VALUE keys) {
+  VALUE result = rb_ary_new2(RARRAY_LEN(keys));
+  for (long i=0; i < RARRAY_LEN(keys); i++) {
+    rb_ary_push(result, rb_hash_aref(element, rb_ary_entry(keys, i)));
+  }
+  return result;
 }
 
 static VALUE combine_element(VALUE src, VALUE nodes, VALUE mappings) {
@@ -68,9 +90,19 @@ static VALUE combine_element(VALUE src, VALUE nodes, VALUE mappings) {
 }
 
 static VALUE find_candidates_for_element(VALUE element, VALUE candidates, VALUE keys) {
-  VALUE pk_name = rb_ary_shift(rb_funcall(keys, rb_intern("keys"), 0)),
-    pkey_value = rb_hash_aref(element, pk_name),
-    result = rb_hash_aref(candidates, pkey_value);
+  VALUE candidates_key = compose_candidates_key(element, keys),
+    result = rb_hash_aref(candidates, candidates_key);
 
   return RTEST(result) ? result : rb_ary_new();
+}
+
+static VALUE compose_candidates_key(VALUE element, VALUE keys) {
+  VALUE pk_name = rb_funcall(keys, rb_intern("keys"), 0);
+
+  if(RARRAY_LEN(pk_name) == 1) {
+    pk_name = rb_ary_shift(pk_name);
+    return rb_hash_aref(element, pk_name);
+  } else {
+    return hash_values_at(element, pk_name);
+  }
 }

@@ -71,6 +71,31 @@ RSpec.describe FastCombine do
       it { is_expected.to eq([{name: 'Jane', email: 'jane@doe.org', tasks: []}]) }
     end
 
+    context 'with double mapping' do
+      let(:input) do
+        [
+          [
+            {name: 'Jane', email: 'jane@doe.org'}.freeze
+          ].freeze,
+          [
+            {user: 'Jane', user_email: 'jane@doe.org', title: 'One'}.freeze,
+            {user: 'Jane', user_email: '', title: 'Two'}.freeze
+          ].freeze
+        ].freeze
+      end
+
+      let(:mappings) { [[:tasks, {name: :user, email: :user_email}]] }
+
+      it 'searches by two keys simultaneously' do
+        output = [
+          {name: 'Jane', email: 'jane@doe.org', tasks: [
+            {user: 'Jane', user_email: 'jane@doe.org', title: 'One'}
+          ]}
+        ]
+        is_expected.to eql(output)
+      end
+    end
+
     xdescribe 'integration test' do
       let(:input) do
         [
