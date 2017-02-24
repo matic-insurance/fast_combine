@@ -1,3 +1,3 @@
-require "mkmf"
+require 'mkmf'
 
-create_makefile("fast_combine/fast_combine")
+create_makefile('fast_combine/fast_combine')
