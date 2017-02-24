@@ -58,6 +58,19 @@ RSpec.describe FastCombine do
       end
     end
 
+    context 'with empty nodes' do
+      let(:input) do
+        [
+          [{name: 'Jane', email: 'jane@doe.org'}.freeze].freeze,
+          []
+        ].freeze
+      end
+
+      let(:mappings) { [[:tasks, {name: :user}]] }
+
+      it { is_expected.to eq([{name: 'Jane', email: 'jane@doe.org', tasks: []}]) }
+    end
+
     xdescribe 'integration test' do
       let(:input) do
         [

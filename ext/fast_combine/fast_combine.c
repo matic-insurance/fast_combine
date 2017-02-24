@@ -69,6 +69,8 @@ static VALUE combine_element(VALUE src, VALUE nodes, VALUE mappings) {
 
 static VALUE find_candidates_for_element(VALUE element, VALUE candidates, VALUE keys) {
   VALUE pk_name = rb_ary_shift(rb_funcall(keys, rb_intern("keys"), 0)),
-    pkey_value = rb_hash_aref(element, pk_name);
-  return rb_hash_aref(candidates, pkey_value);
+    pkey_value = rb_hash_aref(element, pk_name),
+    result = rb_hash_aref(candidates, pkey_value);
+
+  return RTEST(result) ? result : rb_ary_new();
 }
