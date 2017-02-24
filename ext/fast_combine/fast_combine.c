@@ -4,6 +4,7 @@ VALUE rb_mFastCombine;
 
 static VALUE method_combine(VALUE self, VALUE array, VALUE mappings);
 
+static VALUE combine(VALUE array, VALUE mappings);
 static VALUE group_nodes(VALUE nodes, VALUE mappings);
 static VALUE group_candidates(VALUE candidates, VALUE mapping);
 static char is_array_of_hashes(VALUE array);
@@ -21,15 +22,20 @@ void Init_fast_combine(void)
   rb_define_singleton_method(rb_mFastCombine, "combine", method_combine, 2);
 }
 
-static VALUE method_combine(VALUE self, VALUE array, VALUE mappings)
+static VALUE method_combine(VALUE self, VALUE array, VALUE mappings) {
+  return combine(array, mappings);
+}
+
+static VALUE combine(VALUE array, VALUE mappings)
 {
   VALUE root = rb_ary_entry(array, 0),
     nodes = rb_ary_entry(array, 1);
 
   if(NIL_P(nodes) || RARRAY_LEN(nodes) == 0) return root;
 
-  VALUE final_root = rb_ary_new2(RARRAY_LEN(root));
   VALUE grouped_nodes = group_nodes(nodes, mappings);
+
+  VALUE final_root = rb_ary_new2(RARRAY_LEN(root));
   for (long i = 0; i < RARRAY_LEN(root); i++) {
     VALUE element = RARRAY_AREF(root, i);
     VALUE new_element = combine_element(element, grouped_nodes, mappings);
@@ -50,10 +56,12 @@ static VALUE group_nodes(VALUE nodes, VALUE mappings) {
 }
 
 static VALUE group_candidates(VALUE candidates, VALUE mapping) {
-  if(!is_array_of_hashes(candidates)) return candidates;
-
   VALUE keys = rb_ary_entry(mapping, 1),
     child_key = rb_funcall(keys, rb_intern("values"), 0);
+
+  if(RARRAY_LEN(mapping) > 2) {
+    candidates = combine(candidates, rb_ary_entry(mapping, 2));
+  }
 
   if(RARRAY_LEN(child_key) == 1) {
     child_key = rb_ary_shift(child_key);
@@ -92,10 +100,6 @@ static VALUE combine_element(VALUE src, VALUE nodes, VALUE mappings) {
       key = rb_ary_entry(mapping, 0),
       keys = rb_ary_entry(mapping, 1);
 
-    if(RARRAY_LEN(mapping) > 2) {
-      VALUE merged_candidates = method_combine(Qnil, candidates, rb_ary_entry(mapping, 2));
-      candidates = group_candidates(merged_candidates, mapping);
-    }
     if(TYPE(candidates) != T_HASH) rb_raise(rb_eRuntimeError, "Illegal state");;
 
     rb_hash_aset(element, key, find_candidates_for_element(element, candidates, keys));
