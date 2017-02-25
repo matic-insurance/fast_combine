@@ -60,6 +60,51 @@ RSpec.describe FastCombine do
       end
     end
 
+    context 'with enumerable input' do
+      let(:my_enumerator) do
+        Class.new do
+          include Enumerable
+          extend Forwardable
+
+          def_delegator :@array, :each
+
+          def initialize(array)
+            @array = array
+          end
+        end
+      end
+
+      let(:input) do
+        [
+          my_enumerator.new([
+            {name: 'Jane', email: 'jane@doe.org'}.freeze,
+            {name: 'Joe', email: 'joe@doe.org'}.freeze
+          ].freeze),
+          [
+            my_enumerator.new([
+              {user: 'Jane', title: 'One'}.freeze,
+              {user: 'Jane', title: 'Two'}.freeze,
+              {user: 'Joe', title: 'Three'}.freeze
+            ].freeze)
+          ]
+        ].freeze
+      end
+      let(:mappings) { [[:tasks, {name: :user}]] }
+
+      it 'supports works fine' do
+        output = [
+          {name: 'Jane', email: 'jane@doe.org', tasks: [
+            {user: 'Jane', title: 'One'},
+            {user: 'Jane', title: 'Two'}
+          ]},
+          {name: 'Joe', email: 'joe@doe.org', tasks: [
+            {user: 'Joe', title: 'Three'}
+          ]}
+        ]
+        is_expected.to eql(output)
+      end
+    end
+
     context 'with empty nodes' do
       let(:input) do
         [

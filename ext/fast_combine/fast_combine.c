@@ -34,6 +34,7 @@ static VALUE combine(VALUE array, VALUE mappings)
     nodes = rb_ary_entry(array, 1);
 
   if(NIL_P(nodes) || RARRAY_LEN(nodes) == 0) return root;
+  if(TYPE(root) != T_ARRAY) root = rb_funcall(root, rb_intern("to_a"), 0);
 
   VALUE grouped_nodes = group_nodes(nodes, mappings);
 
